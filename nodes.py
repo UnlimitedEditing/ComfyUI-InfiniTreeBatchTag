@@ -123,7 +123,14 @@ class Florence2BatchTagFromURLs:
 
     def run(self, image_urls, model_id, max_seconds, caption_max_tokens, tags_max_tokens):
         deadline = time.monotonic() + max_seconds
-        urls = [u.strip() for u in image_urls.splitlines() if u.strip()]
+        # Graydient's prompt mini-language mangles raw URLs passed through a
+        # slot field (splits on internal "/", confirmed live 2026-09-10:
+        # "https://host/path" arrived as just "https:"). The client percent-
+        # encodes each URL and joins them with "~~~" (a separator that can't
+        # collide with URL-safe or percent-encoded characters) to survive
+        # that parsing; decode both here.
+        from urllib.parse import unquote
+        urls = [unquote(u.strip()) for u in image_urls.split("~~~") if u.strip()]
 
         model, processor, device, dtype = _load_model(model_id)
 
